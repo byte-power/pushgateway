@@ -1,11 +1,19 @@
-ARG ARCH="amd64"
-ARG OS="linux"
-FROM quay.io/prometheus/busybox-${OS}-${ARCH}:latest
+# Build
+FROM golang:1.22.6-alpine AS builder
+
+WORKDIR /app
+COPY . .
+RUN go build -o pushgateway
+
+# Deploy
+ARG TARGETOS
+ARG TARGETARCH
+
+FROM quay.io/prometheus/busybox-${TARGETOS}-${TARGETARCH}:latest
 LABEL maintainer="The Prometheus Authors <prometheus-developers@googlegroups.com>"
 
-ARG ARCH="amd64"
-ARG OS="linux"
-COPY --chown=nobody:nobody .build/${OS}-${ARCH}/pushgateway /bin/pushgateway
+WORKDIR /app
+COPY --from=builder --chown=nobody:nobody /app/pushgateway /bin/pushgateway
 
 EXPOSE 9091
 RUN mkdir -p /pushgateway && chown nobody:nobody /pushgateway
